@@ -8,6 +8,7 @@ def find_path(source, destination, mesh):
 	queue = []
 	path = []
 	visited_nodes = []
+	
 	print(source)
 	print(destination)
 	for box in mesh['boxes']:
@@ -15,25 +16,18 @@ def find_path(source, destination, mesh):
 	#		path.append(box)
 			startBox = box
 	queue = [startBox]
+	prev[startBox] = None
 	while queue:
-		print (queue)
 		discBox = heappop(queue)
-		print(discBox)
 		if destination[0] > discBox[0] and destination[0] < discBox[1] and destination[1] > discBox [2] and destination[1] < discBox[3]: 
-			print("break")
 			break
 		neighbors = mesh['adj'][discBox]
-		print ('neighbors')
-		print (neighbors)
 		for next_box in neighbors:
 			if prev.get(next_box) is None:
 			#if next_box not in prev:
-				print("1")
 				prev[next_box] = discBox
 				heappush(queue,(next_box))
-	print(prev)
 	node = discBox
-	print(node)
 	while node:
 		path.append(node)
 		node = prev[node]
