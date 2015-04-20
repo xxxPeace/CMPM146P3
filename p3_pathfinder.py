@@ -1,9 +1,33 @@
-from sys import exit
 from math import sqrt
 from heapq import heappush, heappop
 
 def heuristic(a, b):
    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+def close_box(src,box):
+	if (src[0] >= box[0]):
+		if (box[1] >= src[0]):
+			closeX = src[0]
+		else:
+			closeX = box[1]
+	else:
+		if (box[1] >= box[0]):
+			closeX = box[0]
+		else:
+			closeX = box[1]
+
+	if (src[1] >= box[2]):
+		if (box[3] >= src[1]):
+			closeY = src[1]
+		else:
+			closeY = box[3]
+	else: 
+		if (box[3] >= box[2]):
+			closeY = box[2]
+		else:
+			closeY = box[3]
+			
+	return (closeX,closeY)
 
 def find_path(source, destination, mesh):
 	dist = {}
@@ -20,13 +44,12 @@ def find_path(source, destination, mesh):
 			dist[startBox] = 0.0
 	if (startBox == None):
 		print('no such source box')
-		exit()
+		return [],[]
 	queue = [(dist[startBox],startBox,source)]
 	prev[startBox] = None
 
 	while queue:
 		discBox = heappop(queue)
-		#print (discBox[1])
 		if destination[0] >= discBox[1][0] and destination[0] <= discBox[1][1] and destination[1] >= discBox[1][2] and destination[1] <= discBox[1][3]: 
 			destination_box = discBox[1]
 			break
@@ -52,32 +75,10 @@ def find_path(source, destination, mesh):
 			#new_cost = dist[discBox[1]] + cost
 
 			#method 3
-			if (prevD[0] >= next_box[0]):
-				if (next_box[1] >= prevD[0]):
-					closeX = prevD[0]
-				else:
-					closeX = next_box[1]
-			else:
-				if (next_box[1] >= next_box[0]):
-					closeX = next_box[0]
-				else:
-					closeX = next_box[1]
+			coypXY = close_box(prevD, next_box)
+			cost = sqrt((prevD[0]-coypXY[0])*(prevD[0]-coypXY[0]) + (prevD[1] - coypXY[1])*(prevD[1] - coypXY[1]))
 
-			if (prevD[1] >= next_box[2]):
-				if (next_box[3] >= prevD[1]):
-					closeY = prevD[1]
-				else:
-					closeY = next_box[3]
-			else: 
-				if (next_box[3] >= next_box[2]):
-					closeY = next_box[2]
-				else:
-					closeY = next_box[3]
-
-			coypXY = (closeX, closeY)
-			cost = sqrt((prevD[0]-closeX)*(prevD[0]-closeX) + (prevD[1] - closeY)*(prevD[1] - closeY))
 			new_cost = dist[discBox[1]] + cost
-
 			if next_box not in prev or new_cost < dist[next_box]:
 				dist[next_box] = new_cost
 				priority = new_cost  + heuristic(destination, coypXY)
@@ -109,30 +110,8 @@ def find_path(source, destination, mesh):
 			#midXY = (midX,midY)
 			#detail_points[box] = (prevPoint,midXY)
 
-			#method 3			
-			if (prevPoint[0] >= box[0]):
-				if (box[1] >= prevPoint[0]):
-					lineX = prevPoint[0]
-				else:
-					lineX = box[1]
-			else:
-				if (box[1] >= box[0]):
-					lineX = box[0]
-				else:
-					lineX = box[1]
-
-			if (prevPoint[1] >= box[2]):
-				if (box[3] >= prevPoint[1]):
-					lineY = prevPoint[1]
-				else:
-					lineY = box[3]
-			else: 
-				if (box[3] >= box[2]):
-					lineY = box[2]
-				else:
-					lineY = box[3]
-
-			lineXY = (lineX, lineY)
+			#method 3
+			lineXY = close_box(prevPoint, box)
 			detail_points[box] = (prevPoint,lineXY)
 
 			if box != destination_box:
