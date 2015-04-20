@@ -2,6 +2,8 @@ from sys import exit
 from math import sqrt
 from heapq import heappush, heappop
 
+def heuristic(a, b):
+   return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 def find_path(source, destination, mesh):
 	dist = {}
@@ -78,8 +80,9 @@ def find_path(source, destination, mesh):
 
 			if next_box not in prev or new_cost < dist[next_box]:
 				dist[next_box] = new_cost
+				priority = new_cost  + heuristic(destination, coypXY)
 				prev[next_box] = discBox[1]
-				heappush(queue,(dist[next_box], next_box, coypXY))
+				heappush(queue,(priority, next_box, coypXY))
 
 
 	if destination[0] >= discBox[1][0] and destination[0] <= discBox[1][1] and destination[1] >= discBox[1][2] and destination[1] <= discBox[1][3]: 
@@ -141,5 +144,7 @@ def find_path(source, destination, mesh):
 	else:
 		print ('no path')
 		return detail_points.values(), prev.keys()
+
+
 
 
