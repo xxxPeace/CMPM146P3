@@ -27,102 +27,106 @@ def close_box(src,box):
 		else:
 			closeY = box[3]
 			
-	return (closeX,closeY)
+	return (closeX, closeY)
 
 def find_path(source, destination, mesh):
 	dist = {}
 	prev = {}
-	queue = []
-	path = []
+	bdist = {}
+	bprev = {}
 	detail_points = {}
+	queue = []
+	bqueue = []
+	path = []	
 	startBox = None
+	endBox = None
 	new_cost = 0.0
+	bnew_cost = 0.0
+	fristBreak = False
+	secondBreak = False
 
 	for box in mesh['boxes']:
 		if source[0] >= box[0] and source[0] <= box[1] and source[1] >= box[2] and source[1] <= box[3]:
 			startBox = box
-			dist[startBox] = 0.0
-	if (startBox == None):
-		print('no such source box')
+			dist[startBox] = 0.0		
+		if destination[0] >= box[0] and destination[0] <= box[1] and destination[1] >= box[2] and destination[1] <= box[3]: 
+			endBox = box
+			bdist[endBox] = 0.0
+	if (startBox == None or endBox == None):
+		print('no such source box or destination box')
 		return [],[]
+
 	queue = [(dist[startBox],startBox,source)]
+	bqueue = [(bdist[endBox],endBox,destination)]
+	
 	prev[startBox] = None
+	bprev[endBox] = None
 
-	while queue:
+	while queue or bqueue:
 		discBox = heappop(queue)
-		if destination[0] >= discBox[1][0] and destination[0] <= discBox[1][1] and destination[1] >= discBox[1][2] and destination[1] <= discBox[1][3]: 
-			destination_box = discBox[1]
+		bdiscBox = heappop(bqueue)
+
+		if discBox[1] in bprev.values():
+			fristBreak = True
 			break
-		neighbors = mesh['adj'][discBox[1]]
-		prevD = (discBox[2][0],discBox[2][1])
+		if bdiscBox[1] in prev.values():
+			secondBreak = True
+			break
+		
+		if discBox[0] <= bdiscBox[0]:
+			neighbors = mesh['adj'][discBox[1]]
+			prevD = (discBox[2][0], discBox[2][1])
+			for next_box in neighbors:
+				coypXY = close_box(prevD, next_box)
+				cost = sqrt((prevD[0]-coypXY[0])*(prevD[0]-coypXY[0]) + (prevD[1] - coypXY[1])*(prevD[1] - coypXY[1]))
+				new_cost = dist[discBox[1]] + cost
+				if next_box not in prev or new_cost < dist[next_box]:
+					dist[next_box] = new_cost
+					priority = new_cost  + heuristic(destination, coypXY)
+					prev[next_box] = discBox[1]
+					heappush(queue,(priority, next_box, coypXY))
+			heappush(bqueue, bdiscBox)
+		if discBox[0] > bdiscBox[0]:
+			bneighbors = mesh['adj'][bdiscBox[1]]
+			bprevD = (bdiscBox[2][0], bdiscBox[2][1])
+			for bnext_box in bneighbors:
+				bcoypXY = close_box(bprevD, bnext_box)
+				bcost = sqrt((bprevD[0]-bcoypXY[0])*(bprevD[0]-bcoypXY[0]) + (bprevD[1] - bcoypXY[1])*(bprevD[1] - bcoypXY[1]))
+				bnew_cost = bdist[bdiscBox[1]] + bcost
+				if bnext_box not in bprev or bnew_cost < bdist[bnext_box]:
+					bdist[bnext_box] = bnew_cost
+					bpriority = bnew_cost  + heuristic(source, bcoypXY)
+					bprev[bnext_box] = bdiscBox[1]
+					heappush(bqueue,(bpriority, bnext_box, bcoypXY))
+			heappush(queue, discBox)
 
-		for next_box in neighbors:
-			#method 1
-			#lessDist = {}
-			#lessDist[sqrt(prevD[0]*next_box[0] + prevD[1]*next_box[2])] = (next_box[0],next_box[2])
-			#lessDist[sqrt(prevD[0]*next_box[1] + prevD[1]*next_box[2])] = (next_box[1],next_box[2])
-			#lessDist[sqrt(prevD[0]*next_box[2] + prevD[1]*next_box[3])] = (next_box[0],next_box[3])
-			#lessDist[sqrt(prevD[0]*next_box[1] + prevD[1]*next_box[3])] = (next_box[1],next_box[3])
-			#tempKey = sorted(lessDist.keys())
-			#coypXY = lessDist[tempKey[0]]
-			#new_cost = dist[discBox[1]] + sorted(lessDist.keys())[0]
-
-			#method 2
-			#midPiontX = (next_box[1] + next_box[0])/2
-			#midPiontY = (next_box[3] + next_box[2])/2
-			#coypXY = (midPiontX, midPiontY)
-			#cost = sqrt(prevD[0]*midPiontX + prevD[1]*midPiontY)
-			#new_cost = dist[discBox[1]] + cost
-
-			#method 3
-			coypXY = close_box(prevD, next_box)
-			cost = sqrt((prevD[0]-coypXY[0])*(prevD[0]-coypXY[0]) + (prevD[1] - coypXY[1])*(prevD[1] - coypXY[1]))
-
-			new_cost = dist[discBox[1]] + cost
-			if next_box not in prev or new_cost < dist[next_box]:
-				dist[next_box] = new_cost
-				priority = new_cost  + heuristic(destination, coypXY)
-				prev[next_box] = discBox[1]
-				heappush(queue,(priority, next_box, coypXY))
-
-
-	if destination[0] >= discBox[1][0] and destination[0] <= discBox[1][1] and destination[1] >= discBox[1][2] and destination[1] <= discBox[1][3]: 
+	if endBox == startBox:
+		detail_points[endBox] = (source,destination)
+		return detail_points.values(), prev.keys() + bprev.keys()
+	if fristBreak:	
 		node = discBox[1]
-		while node != startBox:
-			path.append(node)
-			node = prev[node]
-		path.reverse()
-		prevPoint = source
-		for box in path:
-			#method 1
-			#smallDist = {}
-			#smallDist[sqrt(prevPoint[0]*box[0] + prevPoint[1]*box[2])] = (box[0],box[2])
-			#smallDist[sqrt(prevPoint[0]*box[1] + prevPoint[1]*box[2])] = (box[1],box[2])
-			#smallDist[sqrt(prevPoint[0]*box[3] + prevPoint[1]*box[3])] = (box[0],box[3])
-			#smallDist[sqrt(prevPoint[0]*box[1] + prevPoint[1]*box[3])] = (box[1],box[3])
-			#sortKey = sorted(smallDist.keys())
-			#copyKey = smallDist[sortKey[0]]
-			#detail_points[box] = (prevPoint, copyKey)
+		bnode = bprev[discBox[1]]
+	if secondBreak:
+		node = bdiscBox[1]
+		bnode = bprev[bdiscBox[1]]
+	while node:
+		path.append(node)
+		node = prev[node]
+	path.reverse()
+	while bnode:
+		path.append(bnode)
+		bnode = bprev[bnode]
 
-			#method 2
-			#midX = (box[1] + box[0])/2
-			#midY = (box[3] + box[2])/2
-			#midXY = (midX,midY)
-			#detail_points[box] = (prevPoint,midXY)
+	prevPoint = source
+	for box in path:
+		lineXY = close_box(prevPoint, box)
+		detail_points[box] = (prevPoint,lineXY)
 
-			#method 3
-			lineXY = close_box(prevPoint, box)
-			detail_points[box] = (prevPoint,lineXY)
+		if box != endBox:
+			prevPoint = (lineXY)
+	detail_points[endBox] = (prevPoint,destination)
+	return detail_points.values(), prev.keys() + bprev.keys()
 
-			if box != destination_box:
-				#prevPoint = (copyKey)
-				#prevPoint =(midXY)
-				prevPoint = (lineXY)
-		detail_points[destination_box] = (prevPoint,destination)
-		return detail_points.values(), prev.keys()
-	else:
-		print ('no path')
-		return detail_points.values(), prev.keys()
 
 
 
